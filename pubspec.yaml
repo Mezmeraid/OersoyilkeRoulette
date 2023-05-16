@@ -8,6 +8,7 @@ environment:
 
 # Add regular dependencies here.
 dependencies:
+  path: ^1.8.3
   nyxx: ^5.0.3
 
 dev_dependencies:
