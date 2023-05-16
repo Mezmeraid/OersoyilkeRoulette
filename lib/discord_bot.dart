@@ -81,23 +81,6 @@ class DiscordBot {
     }
   }
 
-  Future<IRole> _createTimeoutRoleIfNeeded(IGuild guild) async {
-    final timeoutRoleName = 'Oersoyilled ! Pew Pew';
-    IRole? timeoutRole;
-
-    try {
-      timeoutRole =
-          guild.roles.values.firstWhere((role) => role.name == timeoutRoleName);
-    } on StateError catch (_) {
-      timeoutRole = await guild.createRole(RoleBuilder(
-        timeoutRoleName,
-        color: DiscordColor.fromHexString('#666666'),
-        permission: PermissionsBuilder(sendMessages: false, speak: false, addReactions: true, sendMessagesInThreads: false, sendTtsMessages: false),
-      ));
-    }
-    return timeoutRole;
-  }
-
   Future<IMember?> _timeout(IMessage msg) async {
     final guildId = msg.guild?.id;
     if (guildId == null) {
@@ -115,25 +98,11 @@ class DiscordBot {
     final guild = await _bot.fetchGuild(guildId);
     final memberToTimeout = await guild.fetchMember(Snowflake(memberId));
 
-    IRole timeoutRole = await _createTimeoutRoleIfNeeded(guild);
-
-    await memberToTimeout.addRole(timeoutRole.id.toSnowflakeEntity());
-    removeTimeoutRole(
-      member: memberToTimeout,
-      timeoutRole: timeoutRole,
-      after: Duration(seconds: 60),
-    );
+    memberToTimeout.edit(
+        builder: MemberBuilder(
+            timeoutUntil: DateTime.now().toUtc().add(Duration(minutes: 5))));
 
     return memberToTimeout;
-  }
-
-  void removeTimeoutRole({
-    required IMember member,
-    required IRole timeoutRole,
-    required Duration after,
-  }) async {
-    await Future.delayed(after);
-    await member.removeRole(timeoutRole.id.toSnowflakeEntity());
   }
 
   void _notifyTimeout({
