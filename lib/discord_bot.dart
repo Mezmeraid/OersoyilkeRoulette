@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:math';
 
 import 'package:nyxx/nyxx.dart';
@@ -11,10 +12,20 @@ class DiscordBot {
     1107745966016180344, // this bot
   ];
   final timeoutDuration = Duration(minutes: 5);
+  final List<String> _gifsList = [
+    'https://media.giphy.com/media/LtFeSxoDE720ZRqu3v/giphy.gif',
+    'https://media.giphy.com/media/DTLzZIeBh33S8/giphy.gif',
+    'https://media.giphy.com/media/AdbuzBaEVJsyI/giphy.gif',
+    'https://tenor.com/view/unicorn-happy-birthday-dance-moves-gif-24459212'
+  ];
 
   late final INyxxWebsocket _bot;
+  late final Queue<String> _gifQueue;
 
   DiscordBot({required this.token, required this.huntersTag}) {
+    _gifsList.shuffle();
+    _gifQueue = Queue.of(_gifsList);
+
     _bot = NyxxFactory.createNyxxWebsocket(
         token, GatewayIntents.allUnprivileged | GatewayIntents.guildMembers)
       ..registerPlugin(Logging())
@@ -106,15 +117,24 @@ class DiscordBot {
     return memberToTimeout;
   }
 
+  String _pickAGif() {
+    final picked = _gifQueue.removeFirst();
+    _gifQueue.addLast(picked);
+    return picked;
+  }
+
+
   void _notifyTimeout({
     required IMessage msg,
     required IMember member,
     required IMember? hunter,
-  }) {
-    msg.channel.sendMessage(MessageBuilder.content(
+  }) async {
+    await msg.channel.sendMessage(MessageBuilder.content(
         'Pew Pew Pew ${member.mention} ! Le divin barillet Oersoyilien s\'est '
         'abattu sur toi${hunter != null ? '!\n'
             '${hunter.mention}, dans son infinie sagesse, nous fait grace de tes paroles pendant ${timeoutDuration.inMinutes} minutes 🤤' : ''}'));
+
+    msg.channel.sendMessage(MessageBuilder.content(_pickAGif()));
   }
 
   bool _isHunterMessage(IMessage msg) => huntersTag.contains(msg.author.tag);
