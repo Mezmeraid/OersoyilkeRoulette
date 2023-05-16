@@ -10,6 +10,7 @@ class DiscordBot {
     287315981632667651, // Mezmeraid
     1107745966016180344, // this bot
   ];
+  final timeoutDuration = Duration(minutes: 5);
 
   late final INyxxWebsocket _bot;
 
@@ -112,7 +113,8 @@ class DiscordBot {
   }) {
     msg.channel.sendMessage(MessageBuilder.content(
         'Pew Pew Pew ${member.mention} ! Le divin barillet Oersoyilien s\'est '
-        'abattu sur toi${hunter != null ? ', merci ${hunter.mention} !' : ''}!'));
+        'abattu sur toi${hunter != null ? '!\n'
+            '${hunter.mention}, dans son infinie sagesse, nous fait grace de tes paroles pendant ${timeoutDuration.inMinutes} minutes 🤤' : ''}'));
   }
 
   bool _isHunterMessage(IMessage msg) => huntersTag.contains(msg.author.tag);
