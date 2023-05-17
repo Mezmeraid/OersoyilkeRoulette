@@ -4,13 +4,13 @@ import 'dart:math';
 import 'package:nyxx/nyxx.dart';
 
 class DiscordBot {
-  final String token;
-  final List<String> huntersTag;
+  late final String token;
+  late final String? masterTag;
+  late final List<String> triggeringMembers;
+  late final List<int> unMutableMembersIds;
+
   final Map<int, List<int>> users = {};
-  final excludedUsers = [
-    287315981632667651, // Mezmeraid
-    1107745966016180344, // this bot
-  ];
+
   final timeoutDuration = Duration(minutes: 5);
   final List<String> _gifsList = [
     'https://media.giphy.com/media/LtFeSxoDE720ZRqu3v/giphy.gif',
@@ -22,7 +22,8 @@ class DiscordBot {
   late final INyxxWebsocket _bot;
   late final Queue<String> _gifQueue;
 
-  DiscordBot({required this.token, required this.huntersTag}) {
+  DiscordBot({required Map<String, dynamic> config}) {
+    initConfig(config);
     _gifsList.shuffle();
     _gifQueue = Queue.of(_gifsList);
 
@@ -33,12 +34,31 @@ class DiscordBot {
       ..registerPlugin(IgnoreExceptions())
       ..connect();
 
-    // Listen to ready event. Invoked when bot is connected to all shards. Note that cache can be empty or not incomplete.
     _bot.eventsWs.onReady.listen((e) {});
 
-    // Listen to all incoming messages
     _bot.eventsWs.onMessageReceived.listen((e) {
       _onMessageReceived(e);
+    });
+  }
+
+  void initConfig(Map<String, dynamic> config) {
+    token = config['token'] as String;
+    masterTag = config['masterTag'] as String?;
+
+    final ar = config['triggeringMembers'] as List<dynamic>?;
+    triggeringMembers = [];
+    ar?.forEach((element) {
+      if (element is String) {
+        triggeringMembers.add(element);
+      }
+    });
+
+    final ar2 = config['unMutableMembersIds'] as List<dynamic>?;
+    unMutableMembersIds = [];
+    ar2?.forEach((element) {
+      if (element is int) {
+        unMutableMembersIds.add(element);
+      }
     });
   }
 
@@ -64,7 +84,7 @@ class DiscordBot {
       final memberStream = guild.fetchMembers(limit: 500);
       List<int> members = [];
       await memberStream.forEach((element) {
-        if (!excludedUsers.contains(element.id.id)) {
+        if (!unMutableMembersIds.contains(element.id.id)) {
           members.add(element.id.id);
         }
       });
@@ -137,5 +157,5 @@ class DiscordBot {
     msg.channel.sendMessage(MessageBuilder.content(_pickAGif()));
   }
 
-  bool _isHunterMessage(IMessage msg) => huntersTag.contains(msg.author.tag);
+  bool _isHunterMessage(IMessage msg) => triggeringMembers.contains(msg.author.tag);
 }
