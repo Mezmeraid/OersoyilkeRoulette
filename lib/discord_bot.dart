@@ -2,12 +2,14 @@ import 'dart:collection';
 import 'dart:math';
 
 import 'package:nyxx/nyxx.dart';
+import 'package:nyxx_commands/nyxx_commands.dart';
 
 class DiscordBot {
   late final String token;
   late final String? masterTag;
   late final List<String> triggeringMembers;
   late final List<int> unMutableMembersIds;
+  late final List<int> guildIds = [];
 
   final Map<int, List<int>> users = {};
 
@@ -28,11 +30,41 @@ class DiscordBot {
     _gifQueue = Queue.of(_gifsList);
 
     _bot = NyxxFactory.createNyxxWebsocket(
-        token, GatewayIntents.allUnprivileged | GatewayIntents.guildMembers)
+        token, GatewayIntents.allUnprivileged | GatewayIntents.guildMembers);
+
+    final commands = CommandsPlugin(
+      prefix: (p0) => '!',
+      guild: Snowflake(591728990515888128),
+    );
+    _bot.registerPlugin(commands);
+    _bot
       ..registerPlugin(Logging())
       ..registerPlugin(CliIntegration())
       ..registerPlugin(IgnoreExceptions())
       ..connect();
+
+    commands.addCommand(ChatCommand(
+      'print_user_list',
+      'print the registered user list',
+      id('print_user_list', (IChatContext context) {
+        if (context.user.tag == masterTag) {
+          final userList = users[context.guild?.id.id];
+          final sb = StringBuffer("Registered users:\n\n");
+          userList?.forEach((element) {
+            sb.write('<@$element>\n');
+          });
+          context.respond(MessageBuilder.content(sb.toString()));
+        }
+        else {
+          context.respond(MessageBuilder.content('Ca va frère ? tu veux quoi ?'));
+        }
+      }),
+      options: CommandOptions(
+        type: CommandType.all,
+        defaultResponseLevel: ResponseLevel.private,
+        autoAcknowledgeInteractions: true,
+      ),
+    ));
 
     _bot.eventsWs.onReady.listen((e) {});
 
@@ -62,6 +94,7 @@ class DiscordBot {
     });
   }
 
+
   Future<void> _updateUsers(IMessageReceivedEvent event) async {
     final guildId = event.message.guild?.id;
     if (guildId == null) {
@@ -70,30 +103,31 @@ class DiscordBot {
     final guildIdInt = guildId.id;
     if (users[guildIdInt] != null && users[guildIdInt]!.isNotEmpty) {
       final authorId = event.message.author.id.id;
-      if (!users[guildIdInt]!.contains(authorId)) {
+      
+      if (!users[guildIdInt]!.contains(authorId) && _isMemberMutable(authorId)) {
         users[guildIdInt]!.add(authorId);
       }
     } else {
       final guild = await _bot.fetchGuild(guildId);
 
-      final test = guild.members.values.toList();
-      if (test.isNotEmpty) {
-        print('OMG member list is not empty ! ${test.length}');
-      }
-
       final memberStream = guild.fetchMembers(limit: 500);
       List<int> members = [];
       await memberStream.forEach((element) {
-        if (!unMutableMembersIds.contains(element.id.id)) {
+        if (_isMemberMutable(element.id.id)) {
           members.add(element.id.id);
         }
       });
       users[guildIdInt] = members;
     }
   }
+  
+  bool _isMemberMutable(int mbrId) {
+    return !unMutableMembersIds.contains(mbrId);
+  }
 
   void _onMessageReceived(IMessageReceivedEvent event) async {
     await _updateUsers(event);
+
     if (_isHunterMessage(event.message)) {
       final random = Random();
       final randomIndex = random.nextInt(1);
@@ -143,7 +177,6 @@ class DiscordBot {
     return picked;
   }
 
-
   void _notifyTimeout({
     required IMessage msg,
     required IMember member,
@@ -157,5 +190,6 @@ class DiscordBot {
     msg.channel.sendMessage(MessageBuilder.content(_pickAGif()));
   }
 
-  bool _isHunterMessage(IMessage msg) => triggeringMembers.contains(msg.author.tag);
+  bool _isHunterMessage(IMessage msg) =>
+      triggeringMembers.contains(msg.author.tag);
 }
