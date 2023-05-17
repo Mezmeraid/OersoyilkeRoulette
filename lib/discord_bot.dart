@@ -10,6 +10,7 @@ class DiscordBot {
   late final List<String> triggeringMembers;
   late final List<int> unMutableMembersIds;
   late final List<int> guildIds;
+  late final int pewRangeChance;
 
   final Map<int, List<int>> users = {};
 
@@ -97,7 +98,7 @@ class DiscordBot {
   void initConfig(Map<String, dynamic> config) {
     token = config['token'] as String;
     masterTag = config['masterTag'] as String?;
-
+    pewRangeChance = config['pewRangeChance'] as int? ?? 1;
 
     triggeringMembers =
         getListFromJsonDict<String>(jsonDict: config, key: "triggeringMembers");
@@ -160,7 +161,7 @@ class DiscordBot {
 
     if (_isHunterMessage(event.message)) {
       final random = Random();
-      final randomIndex = random.nextInt(1);
+      final randomIndex = random.nextInt(pewRangeChance);
       if (randomIndex == 0) {
         print('$randomIndex... pew pew!');
         final timeoutMember = await _timeout(event.message);
