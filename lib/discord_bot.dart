@@ -19,7 +19,18 @@ class DiscordBot {
     'https://media.giphy.com/media/LtFeSxoDE720ZRqu3v/giphy.gif',
     'https://media.giphy.com/media/DTLzZIeBh33S8/giphy.gif',
     'https://media.giphy.com/media/AdbuzBaEVJsyI/giphy.gif',
-    'https://tenor.com/view/unicorn-happy-birthday-dance-moves-gif-24459212'
+    'https://tenor.com/view/unicorn-happy-birthday-dance-moves-gif-24459212',
+    'https://tenor.com/view/unicorn-unicornio-unicorning-unicorn-thumbs-up-gif-15109783',
+    'https://tenor.com/view/squatty-potty-unicorn-unicorn-poop-poop-gif-24221811',
+    'https://tenor.com/view/unicorns-sphere-dizzy-gif-17490100',
+    'https://tenor.com/view/unicorn-unicornio-unicornio-gif-15109784',
+    'https://tenor.com/view/unicorn-cat-gif-24755708',
+    'https://tenor.com/view/unicornrainbow-unicornpiss-unicorn-smile-gif-12583219',
+    'https://tenor.com/view/amazing-rainbow-unicorn-gif-23561091',
+    'https://tenor.com/view/stormtrooper-unicorn-gif-15091364',
+    'https://tenor.com/view/unicorn-legends-gif-18261243',
+    'https://tenor.com/view/nsp-unicorn-weird-happy-drum-gif-5365277',
+    'https://tenor.com/view/jabu-unicorn-saint-seya-gif-18070239'
   ];
 
   late final INyxxWebsocket _bot;
@@ -216,7 +227,7 @@ class DiscordBot {
     await msg.channel.sendMessage(MessageBuilder.content(
         'Pew Pew Pew ${member.mention} ! Le divin barillet Oersoyilien s\'est '
         'abattu sur toi${hunter != null ? '!\n'
-            '${hunter.mention}, dans son infinie sagesse, nous fait grace de tes paroles pendant ${timeoutDuration.inMinutes} minutes 🤤' : ''}'));
+            '${hunter.mention}, dans son infinie sagesse, nous fait grâce de tes paroles pendant ${timeoutDuration.inMinutes} minutes 🤤' : ''}'));
 
     msg.channel.sendMessage(MessageBuilder.content(_pickAGif()));
   }
