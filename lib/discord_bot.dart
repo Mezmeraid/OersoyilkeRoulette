@@ -9,7 +9,7 @@ class DiscordBot {
   late final String? masterTag;
   late final List<String> triggeringMembers;
   late final List<int> unMutableMembersIds;
-  late final List<int> guildIds = [];
+  late final List<int> guildIds;
 
   final Map<int, List<int>> users = {};
 
@@ -32,18 +32,39 @@ class DiscordBot {
     _bot = NyxxFactory.createNyxxWebsocket(
         token, GatewayIntents.allUnprivileged | GatewayIntents.guildMembers);
 
-    final commands = CommandsPlugin(
-      prefix: (p0) => '!',
-      guild: Snowflake(591728990515888128),
-    );
-    _bot.registerPlugin(commands);
+    final commandsPlugins = _registerCommandsPlugin();
     _bot
       ..registerPlugin(Logging())
       ..registerPlugin(CliIntegration())
       ..registerPlugin(IgnoreExceptions())
       ..connect();
 
-    commands.addCommand(ChatCommand(
+    _registerCommands(commandsPlugins);
+
+    _bot.eventsWs.onReady.listen((e) {});
+
+    _bot.eventsWs.onMessageReceived.listen((e) {
+      _onMessageReceived(e);
+    });
+  }
+
+  List<CommandsPlugin> _registerCommandsPlugin() {
+    List<CommandsPlugin> commandsPlugins = [];
+
+    for (var id in guildIds) {
+      final commands = CommandsPlugin(
+        prefix: (p0) => '!',
+        guild: Snowflake(id),
+      );
+      _bot.registerPlugin(commands);
+      commandsPlugins.add(commands);
+    }
+
+    return commandsPlugins;
+  }
+
+  void _registerCommands(List<CommandsPlugin> plugins) {
+    _registerCommand(plugins, ChatCommand(
       'print_user_list',
       'print the registered user list',
       id('print_user_list', (IChatContext context) {
@@ -54,9 +75,9 @@ class DiscordBot {
             sb.write('<@$element>\n');
           });
           context.respond(MessageBuilder.content(sb.toString()));
-        }
-        else {
-          context.respond(MessageBuilder.content('Ca va frère ? tu veux quoi ?'));
+        } else {
+          context
+              .respond(MessageBuilder.content('Ca va frère ? tu veux quoi ?'));
         }
       }),
       options: CommandOptions(
@@ -65,35 +86,38 @@ class DiscordBot {
         autoAcknowledgeInteractions: true,
       ),
     ));
+  }
 
-    _bot.eventsWs.onReady.listen((e) {});
-
-    _bot.eventsWs.onMessageReceived.listen((e) {
-      _onMessageReceived(e);
-    });
+  void _registerCommand(List<CommandsPlugin> plugins, ChatCommand command) {
+    for (var plugin in plugins) {
+      plugin.addCommand(command);
+    }
   }
 
   void initConfig(Map<String, dynamic> config) {
     token = config['token'] as String;
     masterTag = config['masterTag'] as String?;
 
-    final ar = config['triggeringMembers'] as List<dynamic>?;
-    triggeringMembers = [];
-    ar?.forEach((element) {
-      if (element is String) {
-        triggeringMembers.add(element);
-      }
-    });
 
-    final ar2 = config['unMutableMembersIds'] as List<dynamic>?;
-    unMutableMembersIds = [];
-    ar2?.forEach((element) {
-      if (element is int) {
-        unMutableMembersIds.add(element);
-      }
-    });
+    triggeringMembers =
+        getListFromJsonDict<String>(jsonDict: config, key: "triggeringMembers");
+    unMutableMembersIds = getListFromJsonDict<int>(jsonDict: config, key: "unMutableMembersIds");
+    guildIds = getListFromJsonDict<int>(jsonDict: config, key: "guildsIds");
   }
 
+  List<T> getListFromJsonDict<T>({
+    required Map<String, dynamic> jsonDict,
+    required String key,
+  }) {
+    final ar = jsonDict[key] as List<dynamic>?;
+    final list = <T>[];
+    ar?.forEach((element) {
+      if (element is T) {
+        list.add(element);
+      }
+    });
+    return list;
+  }
 
   Future<void> _updateUsers(IMessageReceivedEvent event) async {
     final guildId = event.message.guild?.id;
@@ -103,8 +127,9 @@ class DiscordBot {
     final guildIdInt = guildId.id;
     if (users[guildIdInt] != null && users[guildIdInt]!.isNotEmpty) {
       final authorId = event.message.author.id.id;
-      
-      if (!users[guildIdInt]!.contains(authorId) && _isMemberMutable(authorId)) {
+
+      if (!users[guildIdInt]!.contains(authorId) &&
+          _isMemberMutable(authorId)) {
         users[guildIdInt]!.add(authorId);
       }
     } else {
@@ -120,13 +145,18 @@ class DiscordBot {
       users[guildIdInt] = members;
     }
   }
-  
+
   bool _isMemberMutable(int mbrId) {
     return !unMutableMembersIds.contains(mbrId);
   }
 
   void _onMessageReceived(IMessageReceivedEvent event) async {
     await _updateUsers(event);
+
+    final guildId = event.message.guild?.id.id;
+    if (guildId != null && !guildIds.contains(guildId)) {
+      print("unregistered guild $guildId");
+    }
 
     if (_isHunterMessage(event.message)) {
       final random = Random();
