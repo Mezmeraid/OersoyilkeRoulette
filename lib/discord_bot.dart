@@ -131,11 +131,7 @@ class DiscordBot {
     return list;
   }
 
-  Future<void> _updateUsers(IMessageReceivedEvent event) async {
-    final guildId = event.message.guild?.id;
-    if (guildId == null) {
-      return;
-    }
+  Future<void> _updateUsers(IMessageReceivedEvent event, Snowflake guildId) async {
     final guildIdInt = guildId.id;
     if (users[guildIdInt] != null && users[guildIdInt]!.isNotEmpty) {
       final authorId = event.message.author.id.id;
@@ -163,12 +159,15 @@ class DiscordBot {
   }
 
   void _onMessageReceived(IMessageReceivedEvent event) async {
-    await _updateUsers(event);
-
-    final guildId = event.message.guild?.id.id;
-    if (guildId != null && !guildIds.contains(guildId)) {
-      print("unregistered guild $guildId");
+    final guildId = event.message.guild?.id;
+    if (guildId == null) {
+      return;
     }
+    if (!guildIds.contains(guildId.id)) {
+      print("unregistered guild ${guildId.id}");
+      return;
+    }
+    await _updateUsers(event, guildId);
 
     if (_isHunterMessage(event.message)) {
       final random = Random();
